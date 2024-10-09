@@ -17,9 +17,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable()
 export class OrdersService extends PrismaClient implements OnModuleInit {
   private readonly logger = new Logger('Orders Service');
-  constructor(
-    @Inject(NATS_SERVICE) private readonly client: ClientProxy,
-  ) {
+  constructor(@Inject(NATS_SERVICE) private readonly client: ClientProxy) {
     super();
   }
   async onModuleInit() {
@@ -31,10 +29,7 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
     try {
       const productsIds = createOrderDto.items.map((item) => item.productId);
       const products: any[] = await firstValueFrom(
-        this.client.send(
-          { cmd: ProductActions.VALIDATE_PRODUCT },
-          productsIds,
-        ),
+        this.client.send({ cmd: ProductActions.VALIDATE_PRODUCT }, productsIds),
       );
       const totalAmount = createOrderDto.items.reduce((acc, orderItem) => {
         const priceProduct = products.find(
@@ -92,17 +87,24 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
 
   async findAll(orderPaginationDto: OrderPaginationDto) {
     const { status, page, limit } = orderPaginationDto;
+    try {
+      const totalItems = await this.order.count({
+        where: { status },
+      });
 
-    const totalItems = await this.order.count({
-      where: { status },
-    });
-
-    const data = await this.order.findMany({
-      skip: (page - 1) * limit,
-      take: limit,
-      where: { status },
-    });
-    return this.buildPaginationResponse(data, totalItems, page, limit);
+      const data = await this.order.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        where: { status },
+      });
+      return this.buildPaginationResponse(data, totalItems, page, limit);
+    } catch (error) {
+      // Captura errores de Prisma
+      throw new RpcException({
+        status: 500,
+        message: error.message || 'Error retrieving orders',
+      });
+    }
   }
 
   async findOne(id: string) {
@@ -124,10 +126,7 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
       (orderItem) => orderItem.productId,
     );
     const products: any[] = await firstValueFrom(
-      this.client.send(
-        { cmd: ProductActions.VALIDATE_PRODUCT },
-        productsIds,
-      ),
+      this.client.send({ cmd: ProductActions.VALIDATE_PRODUCT }, productsIds),
     );
     return {
       ...orderById,
