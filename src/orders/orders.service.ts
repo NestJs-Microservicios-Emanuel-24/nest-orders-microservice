@@ -99,7 +99,7 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
       });
       return this.buildPaginationResponse(data, totalItems, page, limit);
     } catch (error) {
-      // Captura errores de Prisma
+      // Captura errores Prisma
       throw new RpcException({
         status: 500,
         message: error.message || 'Error retrieving orders',
