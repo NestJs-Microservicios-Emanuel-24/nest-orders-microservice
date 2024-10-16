@@ -33,12 +33,14 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
       const products: any[] = await firstValueFrom(
         this.client.send({ cmd: ProductActions.VALIDATE_PRODUCT }, productsIds),
       );
-      const totalAmount = createOrderDto.items.reduce((acc, orderItem) => {
-        const priceProduct = products.find(
-          (product) => product.id === orderItem.productId,
-        ).price;
-        return acc + priceProduct * orderItem.quantity;
-      }, 0);
+      const totalAmount = parseFloat(
+        createOrderDto.items.reduce((acc, orderItem) => {
+          const priceProduct = products.find(
+            (product) => product.id === orderItem.productId,
+          ).price;
+          return acc + priceProduct * orderItem.quantity;
+        }, 0).toFixed(2) // Limita a 2 decimales y convierte a string
+      );
 
       const totalItems = createOrderDto.items.reduce((acc, orderItem) => {
         return acc + orderItem.quantity;
