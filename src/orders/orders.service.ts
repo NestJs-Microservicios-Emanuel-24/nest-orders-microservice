@@ -30,6 +30,8 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
   async create(createOrderDto: CreateOrderDto) {
     try {
       const productsIds = createOrderDto.items.map((item) => item.productId);
+      //CUANDO SE RECIBE ID DE PRODUCTOS QUE NO HAY EN LA BD, TIRA UN ERROR NO MANEJADO QUE LLEVA AL CATCH DE ESTE METODO
+      //PENDIENTE
       const products: any[] = await firstValueFrom(
         this.client.send({ cmd: ProductActions.VALIDATE_PRODUCT }, productsIds),
       );
@@ -71,8 +73,7 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
             },
           },
         },
-      });
-
+      });     
       return {
         ...order,
         OrderItem: order.OrderItem.map((orderItem) => ({
@@ -84,7 +85,7 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
     } catch (error) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Something went wrong, check logs ',
+        message: 'Something went wrong, check logs : ' ,error ,
       });
     }
   }

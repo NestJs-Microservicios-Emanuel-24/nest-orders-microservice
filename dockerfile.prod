@@ -1,0 +1,48 @@
+#########dependencias
+FROM node:21-alpine3.19 as deps
+
+WORKDIR /usr/src/app
+
+COPY package.json ./
+COPY package-lock.json ./
+
+RUN npm install
+
+###### builder - cosntruye la aplicaicon
+
+FROM node:21-alpine3.19 as builder
+
+ARG ORDERS_DB_URL
+ENV DATABASE_URL=$ORDERS_DB_URL
+
+WORKDIR /usr/src/app
+
+#copiar de deps , los modulose de node
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+#copiar el cosigo fuente
+COPY . .
+
+
+RUN npx prisma migrate deploy
+RUN npx prisma generate
+RUN npm run build
+
+RUN npm ci -f --only=production && npm cache clean --force
+
+ 
+######crear la imagen final
+FROM node:21-alpine3.19 as prod
+
+WORKDIR /usr/src/app
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+#copiar la carpeta de dsitribucion
+COPY --from=builder /usr/src/app/dist ./dist
+ 
+
+ENV NODE_ENV=production
+
+USER node
+
+EXPOSE 3000
+
+CMD ["node","dist/main.js"]
